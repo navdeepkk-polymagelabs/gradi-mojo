@@ -3,7 +3,7 @@ import numpy as np
 from cpp.binding import gradient_descent_cpp
 from python.gradient_descent import gradient_descent, gradient_descent_cache
 from python.gradient_descent_native import gradient_descent_native, gradient_descent_native_cache, PyMatrix
-from python.gradient_descent_JAX import gradient_descent_JAX, gradient_descent_cache_JAX
+from python.gradient_descent_JAX import gradient_descent_JAX, gradient_descent_JAX_opt, gradient_descent_cache_JAX
 from python.visuals import plot_gradient_descent, plot_gradient_descent_2D, animate_gradient_descent
 
 from timeit import timeit
@@ -54,6 +54,10 @@ def benchmark_gradient_descent(X, D, lr, niter):
 def benchmark_gradient_descent_JAX(X, D, lr, niter):
     secs = timeit(lambda: gradient_descent_JAX(X, D, learning_rate=lr, num_iterations=niter), number=10) / 10
     print(f"Average time JAX: {secs}")
+
+def benchmark_gradient_descent_JAX_opt(X, D, lr, niter):
+    secs = timeit(lambda: gradient_descent_JAX_opt(X, D, learning_rate=lr, num_iterations=niter), number=10) / 10
+    print(f"Average time JAX Opt: {secs}")
     
 def benchmark_gradient_descent_cpp(X, D, lr, niter):
     secs = timeit(lambda: gradient_descent_cpp(X, D, learning_rate=lr, num_iterations=niter), number=10) / 10
@@ -75,12 +79,19 @@ def benchmarks(D, dim, lr, niter, plots=True):
     p1 = gradient_descent_native(X_native.copy(), D_native, learning_rate=lr, num_iterations=niter)
     p2 = gradient_descent(X.copy(), D, learning_rate=lr, num_iterations=niter)
     p3 = gradient_descent_JAX(X.copy(), D, learning_rate=lr, num_iterations=niter)
+    p4 = gradient_descent_JAX_opt(X.copy(), D, learning_rate=lr, num_iterations=niter)
     p_cpp = gradient_descent_cpp(X.copy(), D, learning_rate=lr, num_iterations=niter)
+    if not np.allclose(p3, p4):
+        print("JAX naive vs. JAX opt verification failed")
+        exit(1)
+    else:
+        print("Verification of JAX naive and JAX opt successfull")
 
     ### Benchmarks
     benchmark_gradient_descent_native(X_native.copy(), D_native, lr=lr, niter=niter)
     benchmark_gradient_descent(X.copy(), D, lr=lr, niter=niter)
     benchmark_gradient_descent_JAX(X.copy(), D, lr=lr, niter=niter)
+    benchmark_gradient_descent_JAX_opt(X.copy(), D, lr=lr, niter=niter)
     benchmark_gradient_descent_cpp(X.copy(), D, lr=lr, niter=niter)
 
     ## Visualization
@@ -115,7 +126,7 @@ if __name__ == "__main__":
     dim = 2
     lr = 0.001
     niter = 1000
-    plots = True
+    plots = False
 
     benchmarks(
         D=generate_distance_matrix(points),
