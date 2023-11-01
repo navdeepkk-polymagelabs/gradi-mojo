@@ -33,6 +33,15 @@ def gradient_descent_JAX_opt(X, D, learning_rate=0.0001, num_iterations=1000):
     (X, learning_rate, D), _ = jax.lax.scan(grad_step_opt, (X, learning_rate, D), iterations)
     return X
 
+@partial(jax.jit, static_argnums=(2,3))
+def gradient_descent_JAX_opt_single_loop(X, D, learning_rate=0.0001, num_iterations=1000):
+    D = jnp.array(D)
+    X = jnp.array(X)
+    
+    iterations = jnp.arange(num_iterations)
+    (X, learning_rate, D), _ = jax.lax.scan(grad_step_opt_single_loop, (X, learning_rate, D), iterations)
+    return X
+
 def iter1_using_tensors(carry, row1):
     X, D = carry
     diff = X[row1] - X
@@ -47,6 +56,17 @@ def compute_gradient_using_tensors(X, D):
     (X, D), grad = jax.lax.scan(iter1_using_tensors, (X, D), iterations)
     return grad
 
+def compute_gradient_using_tensors_single_loop(X, D):
+    # X is expected to be 2-d always.
+    Y = jnp.reshape(X, (X.shape[0], 1, X.shape[1]))
+    diff = Y - X
+    diff_squared = diff ** 2
+    squared_distance = jnp.sum(diff_squared, axis=diff_squared.ndim - 1)
+    squared_distance_diff = 4 * (squared_distance - (D ** 2))
+    squared_distance_diff_shape = jnp.array(squared_distance_diff.shape)
+    squared_distance_diff_reshaped = jnp.reshape(squared_distance_diff, (*squared_distance_diff.shape, 1))
+    return jnp.sum(squared_distance_diff_reshaped * diff, axis=1)
+
 def grad_step(carry, x):
     X, learning_rate, D = carry
     
@@ -58,6 +78,13 @@ def grad_step_opt(carry, x):
     X, learning_rate, D = carry
     
     grad = compute_gradient_using_tensors(X, D)
+    X -= learning_rate * grad
+    return (X, learning_rate, D), None
+
+def grad_step_opt_single_loop(carry, x):
+    X, learning_rate, D = carry
+    
+    grad = compute_gradient_using_tensors_single_loop(X, D)
     X -= learning_rate * grad
     return (X, learning_rate, D), None
 
