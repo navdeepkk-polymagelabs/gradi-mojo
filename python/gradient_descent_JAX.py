@@ -25,10 +25,16 @@ def gradient_descent_JAX(X, D, learning_rate=0.0001, num_iterations=1000):
     (X, learning_rate, D), _ = jax.lax.scan(grad_step, (X, learning_rate, D), iterations)
     return X
 
-@polyblocks_jit_jax(compile_options={"target": "nvgpu", "debug": False, "static_argnums": (2, 3)})
+@polyblocks_jit_jax(compile_options={"target": "cpu", "debug": False, "static_argnums": (2, 3)})
 def gradient_descent_polyblocks(X, D, learning_rate=0.0001, num_iterations=1000):
     iterations = jnp.arange(num_iterations)
     (X, learning_rate, D), _ = jax.lax.scan(grad_step, (X, learning_rate, D), iterations)
+    return X
+
+@polyblocks_jit_jax(compile_options={"target": "cpu", "debug": False, "static_argnums": (2, 3)})
+def gradient_descent_polyblocks_single_loop(X, D, learning_rate=0.0001, num_iterations=1000):
+    iterations = jnp.arange(num_iterations)
+    (X, learning_rate, D), _ = jax.lax.scan(grad_step_no_loop, (X, learning_rate, D), iterations)
     return X
 
 def grad_step(carry, x):
@@ -38,10 +44,28 @@ def grad_step(carry, x):
     X -= learning_rate * grad
     return (X, learning_rate, D), None
 
+def grad_step_no_loop(carry, x):
+    X, learning_rate, D = carry
+
+    grad = compute_gradient_using_tensors(X, D)
+    X -= learning_rate * grad
+    return (X, learning_rate, D), None
+
 def compute_gradient(X, D):
     iterations = jnp.arange(X.shape[0])
     (X, D), grad = jax.lax.scan(iter1, (X, D), iterations)
     return grad
+
+def compute_gradient_using_tensors(X, D):
+    # X is expected to be 2-d always.
+    Y = jnp.reshape(X, (X.shape[0], 1, X.shape[1]))
+    diff = Y - X
+    diff_squared = diff ** 2
+    squared_distance = jnp.sum(diff_squared, axis=diff_squared.ndim - 1)
+    squared_distance_diff = 4 * (squared_distance - (D ** 2))
+    squared_distance_diff_shape = jnp.array(squared_distance_diff.shape)
+    squared_distance_diff_reshaped = jnp.reshape(squared_distance_diff, (*squared_distance_diff.shape, 1))
+    return jnp.sum(squared_distance_diff_reshaped * diff, axis=1)
 
 def iter1(carry, row1):
     X, D = carry
