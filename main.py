@@ -3,7 +3,7 @@ import numpy as np
 from cpp.binding import gradient_descent_cpp
 from python.gradient_descent import gradient_descent, gradient_descent_cache
 from python.gradient_descent_native import gradient_descent_native, gradient_descent_native_cache, PyMatrix
-from python.gradient_descent_JAX import gradient_descent_JAX, gradient_descent_polyblocks, gradient_descent_polyblocks_single_loop, gradient_descent_cache_JAX
+from python.gradient_descent_JAX import gradient_descent_JAX, gradient_descent_polyblocks, gradient_descent_polyblocks_single_loop, gradient_descent_polyblocks_single_loop_to_plot, gradient_descent_cache_JAX
 from python.visuals import plot_gradient_descent, plot_gradient_descent_2D, animate_gradient_descent
 import jax
 
@@ -71,7 +71,6 @@ def benchmark_gradient_descent_cpp(X, D, lr, niter):
 
 
 def benchmarks(D, dim, lr, niter, plots=True):
-
     N = len(D)
     D = np.array(D, dtype=np.float64)
     D_native = PyMatrix(D.tolist(), N, N)
@@ -80,14 +79,14 @@ def benchmarks(D, dim, lr, niter, plots=True):
     np.random.seed(42)
     X = np.random.rand(N, dim)
     X_native = PyMatrix(X.tolist(), N, dim)
-    D_JAX = jax.device_put(D, jax.devices("cpu")[0])
-    X_JAX = jax.device_put(X, jax.devices("cpu")[0])
+    D_JAX = jax.device_put(D, jax.devices("gpu")[0])
+    X_JAX = jax.device_put(X, jax.devices("gpu")[0])
 
     ### Without visuals
     #p1 = gradient_descent_native(X_native.copy(), D_native, learning_rate=lr, num_iterations=niter)
     #p2 = gradient_descent(X.copy(), D, learning_rate=lr, num_iterations=niter)
-    p3 = gradient_descent_JAX(X.copy(), D, learning_rate=lr, num_iterations=niter)
-    p4 = gradient_descent_polyblocks(X_JAX.copy(), D_JAX, learning_rate=lr, num_iterations=niter)
+    p3 = gradient_descent_JAX(X_JAX.copy(), D_JAX, learning_rate=lr, num_iterations=niter)
+    #p4 = gradient_descent_polyblocks(X_JAX.copy(), D_JAX, learning_rate=lr, num_iterations=niter)
     p5 = gradient_descent_polyblocks_single_loop(X_JAX.copy(), D_JAX, learning_rate=lr, num_iterations=niter)
     #p_cpp = gradient_descent_cpp(X.copy(), D, learning_rate=lr, num_iterations=niter)
 
@@ -99,38 +98,43 @@ def benchmarks(D, dim, lr, niter, plots=True):
     ### Benchmarks
     #benchmark_gradient_descent_native(X_native.copy(), D_native, lr=lr, niter=niter)
     #benchmark_gradient_descent(X.copy(), D, lr=lr, niter=niter)
-    benchmark_gradient_descent_JAX(X.copy(), D, lr=lr, niter=niter)
-    benchmark_gradient_descent_polyblocks(X_JAX.copy(), D_JAX, lr=lr, niter=niter)
+    #benchmark_gradient_descent_JAX(X.copy(), D, lr=lr, niter=niter)
+    #benchmark_gradient_descent_polyblocks(X_JAX.copy(), D_JAX, lr=lr, niter=niter)
     benchmark_gradient_descent_polyblocks_single_loop(X_JAX.copy(), D_JAX, lr=lr, niter=niter)
     #benchmark_gradient_descent_cpp(X.copy(), D, lr=lr, niter=niter)
 
     ## Visualization
     if plots:
-        P, L = gradient_descent_cache(X.copy(), D, learning_rate=lr, num_iterations=niter)
-        plot_gradient_descent_2D(P, L, title="Gradient Descent in python numpy")
-        plot_gradient_descent(P, L, title="Gradient Descent in python numpy")
+        #P, L = gradient_descent_cache(X.copy(), D, learning_rate=lr, num_iterations=niter)
+        #plot_gradient_descent_2D(P, L, title="Gradient Descent in python numpy")
+        #plot_gradient_descent(P, L, title="Gradient Descent in python numpy")
         
-        P_native, L_native = gradient_descent_native_cache(X_native.copy(), D_native, learning_rate=lr, num_iterations=niter)
-        plot_gradient_descent(P_native, L_native, title="Gradient Descent in native python")
+        #P_native, L_native = gradient_descent_native_cache(X_native.copy(), D_native, learning_rate=lr, num_iterations=niter)
+        #plot_gradient_descent(P_native, L_native, title="Gradient Descent in native python")
 
         # TODO
+        X_shape = jax.numpy.array(X.shape)
+        P_JAX = jax.device_put(jax.numpy.empty((niter, X_shape[0], X_shape[1]), X.dtype), jax.devices("gpu")[0])
+        L_JAX = jax.device_put(jax.numpy.empty(niter, D.dtype), jax.devices("gpu")[0])
+        _ = gradient_descent_polyblocks_single_loop_to_plot(X_JAX.copy(), D_JAX, P_JAX, L_JAX, learning_rate=lr, num_iterations=niter)
+        _ = gradient_descent_polyblocks_single_loop_to_plot(X_JAX.copy(), D_JAX, P_JAX, L_JAX, learning_rate=lr, num_iterations=niter)
         # P_JAX, L_JAX = gradient_descent_cache_JAX(X.copy(), D, learning_rate=lr, num_iterations=niter)
-        # plot_gradient_descent(P_JAX, L_JAX, title="Gradient Descent in JAX")
+        animate_gradient_descent(P_JAX, L_JAX, title="Gradient Descent in JAX")
         
         # (cache function not implemented: Can only plot final value)
-        plot_gradient_descent(p_cpp, -1, title="Gradient Descent in C++")
+        #plot_gradient_descent(p_cpp, -1, title="Gradient Descent in C++")
 
-        animate_gradient_descent(P, L, trace=False)
+        #animate_gradient_descent(P, L, trace=False)
 
 
 if __name__ == "__main__":
     
     # Create optimization target
-    n_circle = 10
-    dim_circle = 2
-    points = generate_radial_points(n_circle, dim_circle)           # circle/sphere
+    n_circle = 100
+    dim_circle = 3
+    # points = generate_radial_points(n_circle, dim_circle)           # circle/spher3
     # points = np.loadtxt("./shapes/modular.csv", delimiter=",")      # modular (N = 1000)
-    # points = np.loadtxt("./shapes/flame.csv", delimiter=",")        # flame (N = 307)
+    points = np.loadtxt("./shapes/flame.csv", delimiter=",")        # flame (N = 307)
     
     # Optimization input
     dim = 2
