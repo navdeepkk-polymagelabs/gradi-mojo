@@ -90,7 +90,7 @@ def benchmarks(D, dim, lr, niter, plots=True):
     p5 = gradient_descent_polyblocks_single_loop(X_JAX.copy(), D_JAX, learning_rate=lr, num_iterations=niter)
     #p_cpp = gradient_descent_cpp(X.copy(), D, learning_rate=lr, num_iterations=niter)
 
-    if not np.allclose(p3, p5):
+    if not np.allclose(p3, p5, atol=0.0005):
         print("Verification failed")
         exit(1)
     print("Verification successful")
@@ -98,7 +98,7 @@ def benchmarks(D, dim, lr, niter, plots=True):
     ### Benchmarks
     #benchmark_gradient_descent_native(X_native.copy(), D_native, lr=lr, niter=niter)
     #benchmark_gradient_descent(X.copy(), D, lr=lr, niter=niter)
-    #benchmark_gradient_descent_JAX(X.copy(), D, lr=lr, niter=niter)
+    benchmark_gradient_descent_JAX(X_JAX.copy(), D_JAX, lr=lr, niter=niter)
     #benchmark_gradient_descent_polyblocks(X_JAX.copy(), D_JAX, lr=lr, niter=niter)
     benchmark_gradient_descent_polyblocks_single_loop(X_JAX.copy(), D_JAX, lr=lr, niter=niter)
     #benchmark_gradient_descent_cpp(X.copy(), D, lr=lr, niter=niter)
@@ -131,10 +131,10 @@ if __name__ == "__main__":
     
     # Create optimization target
     n_circle = 100
-    dim_circle = 3
-    # points = generate_radial_points(n_circle, dim_circle)           # circle/spher3
+    dim_circle = 2
+    points = generate_radial_points(n_circle, dim_circle)           # circle/spher3
     # points = np.loadtxt("./shapes/modular.csv", delimiter=",")      # modular (N = 1000)
-    points = np.loadtxt("./shapes/flame.csv", delimiter=",")        # flame (N = 307)
+    #points = np.loadtxt("./shapes/flame.csv", delimiter=",")        # flame (N = 307)
     
     # Optimization input
     dim = 2

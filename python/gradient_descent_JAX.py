@@ -28,7 +28,7 @@ def loss_using_tensors(X, D):
 @partial(jax.jit, static_argnums=(2,3))
 def gradient_descent_JAX(X, D, learning_rate=0.0001, num_iterations=1000):
     iterations = jnp.arange(num_iterations)
-    (X, learning_rate, D), _ = jax.lax.scan(grad_step, (X, learning_rate, D), iterations)
+    (X, learning_rate, D), _ = jax.lax.scan(grad_step_no_loop, (X, learning_rate, D), iterations)
     return X
 
 @polyblocks_jit_jax(compile_options={"target": "cpu", "debug": False, "static_argnums": (2, 3)})
