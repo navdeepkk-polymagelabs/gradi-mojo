@@ -79,8 +79,8 @@ def benchmarks(D, dim, lr, niter, plots=True):
     np.random.seed(42)
     X = np.random.rand(N, dim)
     X_native = PyMatrix(X.tolist(), N, dim)
-    D_JAX = jax.device_put(D, jax.devices("gpu")[0])
-    X_JAX = jax.device_put(X, jax.devices("gpu")[0])
+    D_JAX = jax.device_put(D, jax.devices("cpu")[0])
+    X_JAX = jax.device_put(X, jax.devices("cpu")[0])
 
     ### Without visuals
     #p1 = gradient_descent_native(X_native.copy(), D_native, learning_rate=lr, num_iterations=niter)
@@ -98,9 +98,9 @@ def benchmarks(D, dim, lr, niter, plots=True):
     ### Benchmarks
     #benchmark_gradient_descent_native(X_native.copy(), D_native, lr=lr, niter=niter)
     #benchmark_gradient_descent(X.copy(), D, lr=lr, niter=niter)
-    benchmark_gradient_descent_JAX(X_JAX.copy(), D_JAX, lr=lr, niter=niter)
+    #benchmark_gradient_descent_JAX(X_JAX.copy(), D_JAX, lr=lr, niter=niter)
     #benchmark_gradient_descent_polyblocks(X_JAX.copy(), D_JAX, lr=lr, niter=niter)
-    benchmark_gradient_descent_polyblocks_single_loop(X_JAX.copy(), D_JAX, lr=lr, niter=niter)
+    #benchmark_gradient_descent_polyblocks_single_loop(X_JAX.copy(), D_JAX, lr=lr, niter=niter)
     #benchmark_gradient_descent_cpp(X.copy(), D, lr=lr, niter=niter)
 
     ## Visualization
@@ -114,12 +114,11 @@ def benchmarks(D, dim, lr, niter, plots=True):
 
         # TODO
         X_shape = jax.numpy.array(X.shape)
-        P_JAX = jax.device_put(jax.numpy.empty((niter, X_shape[0], X_shape[1]), X.dtype), jax.devices("gpu")[0])
-        L_JAX = jax.device_put(jax.numpy.empty(niter, D.dtype), jax.devices("gpu")[0])
-        _ = gradient_descent_polyblocks_single_loop_to_plot(X_JAX.copy(), D_JAX, P_JAX, L_JAX, learning_rate=lr, num_iterations=niter)
-        _ = gradient_descent_polyblocks_single_loop_to_plot(X_JAX.copy(), D_JAX, P_JAX, L_JAX, learning_rate=lr, num_iterations=niter)
+        P_JAX = jax.device_put(jax.numpy.empty((niter, X_shape[0], X_shape[1]), jax.numpy.float32), jax.devices("cpu")[0])
+        L_JAX = jax.device_put(jax.numpy.empty(niter, jax.numpy.float32), jax.devices("cpu")[0])
+        X_res, P_res, L_res = gradient_descent_polyblocks_single_loop_to_plot(X_JAX.copy(), D_JAX, P_JAX, L_JAX, learning_rate=lr, num_iterations=niter)
         # P_JAX, L_JAX = gradient_descent_cache_JAX(X.copy(), D, learning_rate=lr, num_iterations=niter)
-        animate_gradient_descent(P_JAX, L_JAX, title="Gradient Descent in JAX")
+        animate_gradient_descent(P_res, L_res, title="Gradient Descent in JAX")
         
         # (cache function not implemented: Can only plot final value)
         #plot_gradient_descent(p_cpp, -1, title="Gradient Descent in C++")
@@ -139,8 +138,8 @@ if __name__ == "__main__":
     # Optimization input
     dim = 2
     lr = 0.001
-    niter = 1000
-    plots = False 
+    niter = 100
+    plots = True
 
     benchmarks(
         D=generate_distance_matrix(points),
