@@ -43,12 +43,17 @@ def gradient_descent_polyblocks_single_loop(X, D, learning_rate=0.0001, num_iter
     (X, learning_rate, D), _ = jax.lax.scan(grad_step_no_loop, (X, learning_rate, D), iterations)
     return X
 
-#@polyblocks_jit_jax(compile_options={"target": "cpu", "debug": True, "static_argnums": (2, 3)})
-@partial(jax.jit, static_argnums=(4,5))
-def gradient_descent_polyblocks_single_loop_to_plot(X, D, positions_over_time, loss_over_time, learning_rate=0.0001, num_iterations=1000):
+@polyblocks_jit_jax(compile_options={"target": "cpu", "debug": False, "static_argnums": (2, 3)})
+def gradient_descent_polyblocks_single_loop_to_plot(X, D, learning_rate=0.0001, num_iterations=1000):
     iterations = jnp.arange(num_iterations)
-    (X, learning_rate, D, positions_over_time, loss_over_time), _ = jax.lax.scan(grad_step_no_loop_to_plot, (X, learning_rate, D, positions_over_time, loss_over_time), iterations)
-    return X, positions_over_time, loss_over_time
+    (X, learning_rate, D), (positions_over_time, loss_over_time) = jax.lax.scan(grad_step_no_loop_to_plot, (X, learning_rate, D), iterations)
+    return (X, positions_over_time, loss_over_time)
+
+@partial(jax.jit, static_argnums=(2, 3))
+def gradient_descent_jax_single_loop_to_plot(X, D, learning_rate=0.0001, num_iterations=1000):
+    iterations = jnp.arange(num_iterations)
+    (X, learning_rate, D), (positions_over_time, loss_over_time) = jax.lax.scan(grad_step_no_loop_to_plot, (X, learning_rate, D), iterations)
+    return (X, positions_over_time, loss_over_time)
 
 def grad_step(carry, x):
     X, learning_rate, D = carry
@@ -65,15 +70,12 @@ def grad_step_no_loop(carry, x):
     return (X, learning_rate, D), None
 
 def grad_step_no_loop_to_plot(carry, x):
-    X, learning_rate, D, positions_over_time, loss_over_time = carry
+    X, learning_rate, D = carry
 
     grad = compute_gradient_using_tensors(X, D)
     X -= learning_rate * grad
 
-    positions_over_time = positions_over_time.at[x].set(X)
-    loss_over_time = loss_over_time.at[x].set(loss_using_tensors(X, D))
-
-    return (X, learning_rate, D, positions_over_time, loss_over_time), None
+    return (X, learning_rate, D), (X, loss_using_tensors(X, D))
 
 def grad_step_with_time_evolution(carry, x):
     X, learning_rate, D = carry

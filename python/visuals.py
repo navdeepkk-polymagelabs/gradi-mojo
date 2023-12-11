@@ -150,4 +150,5 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
             ) for i in range(1, time_steps)]
     )
 
-    fig.show()
+    print(f"Done...")
+    fig.write_html("_".join(title.split())+".html")
