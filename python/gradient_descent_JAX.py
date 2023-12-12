@@ -34,32 +34,57 @@ def gradient_descent_JAX_gpu(X, D, learning_rate=0.0001, num_iterations=1000):
 @partial(jax.jit, static_argnums=(2,3))
 def gradient_descent_JAX_cpu(X, D, learning_rate=0.0001, num_iterations=1000):
     iterations = jnp.arange(num_iterations)
-    (X, learning_rate, D), _ = jax.lax.scan(grad_step_no_loop, (X, learning_rate, D), iterations)
+    (X, learning_rate, D), _ = jax.lax.scan(grad_step, (X, learning_rate, D), iterations)
     return X
 
 @polyblocks_jit_jax(compile_options={"target": "cpu", "debug": False, "static_argnums": (2, 3)})
-def gradient_descent_polyblocks(X, D, learning_rate=0.0001, num_iterations=1000):
+def gradient_descent_polyblocks_cpu(X, D, learning_rate=0.0001, num_iterations=1000):
     iterations = jnp.arange(num_iterations)
     (X, learning_rate, D), _ = jax.lax.scan(grad_step, (X, learning_rate, D), iterations)
     return X
 
 @polyblocks_jit_jax(compile_options={"target": "cpu", "debug": False, "static_argnums": (2, 3)})
-def gradient_descent_polyblocks_single_loop(X, D, learning_rate=0.0001, num_iterations=1000):
+def gradient_descent_polyblocks_single_loop_cpu(X, D, learning_rate=0.0001, num_iterations=1000):
     iterations = jnp.arange(num_iterations)
     (X, learning_rate, D), _ = jax.lax.scan(grad_step_no_loop, (X, learning_rate, D), iterations)
     return X
 
 @polyblocks_jit_jax(compile_options={"target": "cpu", "debug": False, "static_argnums": (2, 3)})
-def gradient_descent_polyblocks_single_loop_to_plot(X, D, learning_rate=0.0001, num_iterations=1000):
+def gradient_descent_polyblocks_single_loop_to_plot_cpu(X, D, learning_rate=0.0001, num_iterations=1000):
+    iterations = jnp.arange(num_iterations)
+    (X, learning_rate, D), (positions_over_time, loss_over_time) = jax.lax.scan(grad_step_no_loop_to_plot, (X, learning_rate, D), iterations)
+    return (X, positions_over_time, loss_over_time)
+
+@polyblocks_jit_jax(compile_options={"target": "nvgpu", "debug": False, "static_argnums": (2, 3)})
+def gradient_descent_polyblocks_gpu(X, D, learning_rate=0.0001, num_iterations=1000):
+    iterations = jnp.arange(num_iterations)
+    (X, learning_rate, D), _ = jax.lax.scan(grad_step, (X, learning_rate, D), iterations)
+    return X
+
+@polyblocks_jit_jax(compile_options={"target": "nvgpu", "debug": False, "static_argnums": (2, 3)})
+def gradient_descent_polyblocks_single_loop_gpu(X, D, learning_rate=0.0001, num_iterations=1000):
+    iterations = jnp.arange(num_iterations)
+    (X, learning_rate, D), _ = jax.lax.scan(grad_step_no_loop, (X, learning_rate, D), iterations)
+    return X
+
+@polyblocks_jit_jax(compile_options={"target": "nvgpu", "debug": False, "static_argnums": (2, 3)})
+def gradient_descent_polyblocks_single_loop_to_plot_gpu(X, D, learning_rate=0.0001, num_iterations=1000):
     iterations = jnp.arange(num_iterations)
     (X, learning_rate, D), (positions_over_time, loss_over_time) = jax.lax.scan(grad_step_no_loop_to_plot, (X, learning_rate, D), iterations)
     return (X, positions_over_time, loss_over_time)
 
 @partial(jax.jit, static_argnums=(2, 3))
-def gradient_descent_jax_single_loop_to_plot(X, D, learning_rate=0.0001, num_iterations=1000):
+def gradient_descent_jax_to_plot_gpu(X, D, learning_rate=0.0001, num_iterations=1000):
     iterations = jnp.arange(num_iterations)
     (X, learning_rate, D), (positions_over_time, loss_over_time) = jax.lax.scan(grad_step_no_loop_to_plot, (X, learning_rate, D), iterations)
     return (X, positions_over_time, loss_over_time)
+
+@partial(jax.jit, static_argnums=(2, 3))
+def gradient_descent_jax_to_plot_cpu(X, D, learning_rate=0.001, num_iterations=1000):
+    iterations = jnp.arange(num_iterations)
+    (X, learning_rate, D), (positions_over_time, loss_over_time) = jax.lax.scan(grad_step_with_time_evolution, (X, learning_rate, D), iterations)
+    return (X, positions_over_time, loss_over_time)
+
 
 def grad_step(carry, x):
     X, learning_rate, D = carry
@@ -85,12 +110,9 @@ def grad_step_no_loop_to_plot(carry, x):
 
 def grad_step_with_time_evolution(carry, x):
     X, learning_rate, D = carry
-
     loss_val = loss_using_tensors(X, D)
-
-    grad = compute_gradient_using_tensors(X, D)
+    grad = compute_gradient(X, D)
     X -= learning_rate * grad
-
     return (X, learning_rate, D), (X, loss_val)
 
 def compute_gradient(X, D):
@@ -117,24 +139,3 @@ def iter1(carry, row1):
     squared_distance_diff = 4 * (squared_distance - (D[row1] ** 2).T)
     squared_distance_diff_reshaped = jnp.reshape(squared_distance_diff, (squared_distance_diff.shape[0], 1))
     return (X, D), jnp.sum(squared_distance_diff_reshaped * diff, axis=0)
-
-# ----- Jax cache method for plotting -----
-def gradient_descent_cache_JAX(X, D, learning_rate=0.001, num_iterations=1000):
-    D = jnp.array(D)
-    X = jnp.array(X)
-    
-    iterations = jnp.arange(num_iterations)
-    (X, learning_rate, D), (positions_over_time, loss_over_time) = jax.lax.scan(grad_step_with_time_evolution, (X, learning_rate, D), iterations)
-
-    #positions_over_time.append(X.copy())
-    #loss_over_time.append(loss(X, D))
-
-    return positions_over_time, loss_over_time
-
-
-def grad_step_with_time_evolution(carry, x):
-    X, learning_rate, D = carry
-    loss_val = loss(X, D)
-    grad = compute_gradient(X, D)
-    X -= learning_rate * grad
-    return (X, learning_rate, D), (X,loss_val)

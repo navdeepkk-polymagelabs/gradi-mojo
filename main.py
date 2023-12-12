@@ -13,11 +13,14 @@ from python.gradient_descent_native import (
 from python.gradient_descent_JAX import (
     gradient_descent_JAX_cpu,
     gradient_descent_JAX_gpu,
-    gradient_descent_polyblocks,
-    gradient_descent_polyblocks_single_loop,
-    gradient_descent_polyblocks_single_loop_to_plot,
-    gradient_descent_jax_single_loop_to_plot,
-    gradient_descent_cache_JAX,
+    gradient_descent_polyblocks_cpu,
+    gradient_descent_polyblocks_single_loop_cpu,
+    gradient_descent_polyblocks_single_loop_to_plot_cpu,
+    gradient_descent_polyblocks_gpu,
+    gradient_descent_polyblocks_single_loop_gpu,
+    gradient_descent_polyblocks_single_loop_to_plot_gpu,
+    gradient_descent_jax_to_plot_cpu,
+    gradient_descent_jax_to_plot_gpu,
 )
 from python.visuals import (
     plot_gradient_descent,
@@ -113,55 +116,46 @@ def benchmarks(
     X_JAX = jax.device_put(X, device)
 
     if verify:
+
+        def run_verification_run(X, D, lr, niter, func):
+            return func(X, D, lr, niter)
+
         print("Running verification runs...")
         all_res = []
         if run_jax:
-            if not gpu:
-                all_res.append(
-                    (
-                        gradient_descent_JAX_cpu(
-                            X_JAX.copy(),
-                            D_JAX.copy(),
-                            learning_rate=lr,
-                            num_iterations=niter,
-                        ),
-                        "jax",
-                    )
+            func = gradient_descent_JAX_cpu
+            if gpu:
+                func = gradient_descent_JAX_gpu
+            all_res.append(
+                (
+                    run_verification_run(
+                        X_JAX.copy(), D_JAX.copy(), lr, niter, func
+                    ),
+                    "jax",
                 )
-            else:
-                all_res.append(
-                    (
-                        gradient_descent_JAX_gpu(
-                            X_JAX.copy(),
-                            D_JAX.copy(),
-                            learning_rate=lr,
-                            num_iterations=niter,
-                        ),
-                        "jax",
-                    )
-                )
+            )
 
         if run_polyblocks:
             if run_polyblocks_double_loop:
+                func = gradient_descent_polyblocks_cpu
+                if gpu:
+                    func = gradient_descent_polyblocks_gpu
                 all_res.append(
                     (
-                        gradient_descent_polyblocks(
-                            X_JAX.copy(),
-                            D_JAX.copy(),
-                            learning_rate=lr,
-                            num_iterations=niter,
+                        run_verification_run(
+                            X_JAX.copy(), D_JAX.copy(), lr, niter, func
                         ),
                         "polyblocks_double_loop",
                     )
                 )
             else:
+                func = gradient_descent_polyblocks_single_loop_cpu
+                if gpu:
+                    func = gradient_descent_polyblocks_single_loop_gpu
                 all_res.append(
                     (
-                        gradient_descent_polyblocks_single_loop(
-                            X_JAX.copy(),
-                            D_JAX.copy(),
-                            learning_rate=lr,
-                            num_iterations=niter,
+                        run_verification_run(
+                            X_JAX.copy(), D_JAX.copy(), lr, niter, func
                         ),
                         "polyblocks_single_loop",
                     )
@@ -172,8 +166,8 @@ def benchmarks(
                     gradient_descent_cpp(
                         X.copy(),
                         D.copy(),
-                        learning_rate=lr,
-                        num_iterations=niter,
+                        lr,
+                        niter,
                     ),
                     "cpp",
                 )
@@ -191,44 +185,41 @@ def benchmarks(
         print("Verification successful")
 
     ### Benchmarks
+    speed_up_over_jax = None
     if benchmark:
         print("Benchmarking runs...")
+
+        def run_benchmarking_run(X, D, lr, niter, func):
+            return run_benchmarking_run
+
+        time_jax = None
         if run_jax:
             # Warm-up.
-            if not gpu:
-                gradient_descent_JAX_cpu(
-                    X_JAX.copy(),
-                    D_JAX.copy(),
-                    learning_rate=lr,
-                    num_iterations=niter,
-                )
-                time_jax = benchmark_func(
-                    X_JAX.copy(),
-                    D_JAX.copy(),
-                    lr,
-                    niter,
-                    "JAX",
-                    gradient_descent_JAX_cpu,
-                )
-            else:
-                gradient_descent_JAX_gpu(
-                    X_JAX.copy(),
-                    D_JAX.copy(),
-                    learning_rate=lr,
-                    num_iterations=niter,
-                )
-                time_jax = benchmark_func(
-                    X_JAX.copy(),
-                    D_JAX.copy(),
-                    lr,
-                    niter,
-                    "JAX",
-                    gradient_descent_JAX_gpu,
-                )
+            func = gradient_descent_JAX_cpu
+            if gpu:
+                func = gradient_descent_JAX_gpu
+            func(
+                X_JAX.copy(),
+                D_JAX.copy(),
+                learning_rate=lr,
+                num_iterations=niter,
+            )
+            time_jax = benchmark_func(
+                X_JAX.copy(),
+                D_JAX.copy(),
+                lr,
+                niter,
+                "JAX",
+                func,
+            )
+        time_pb = None
         if run_polyblocks:
             if run_polyblocks_double_loop:
+                func = gradient_descent_polyblocks_cpu
+                if gpu:
+                    func = gradient_descent_polyblocks_gpu
                 # Warm-up.
-                gradient_descent_polyblocks(
+                func(
                     X_JAX.copy(),
                     D_JAX.copy(),
                     learning_rate=lr,
@@ -240,11 +231,14 @@ def benchmarks(
                     lr,
                     niter,
                     "Polyblocks",
-                    gradient_descent_polyblocks,
+                    func,
                 )
             else:
+                func = gradient_descent_polyblocks_single_loop_cpu
+                if gpu:
+                    func = gradient_descent_polyblocks_single_loop_gpu
                 # Warm-up.
-                gradient_descent_polyblocks_single_loop(
+                func(
                     X_JAX.copy(),
                     D_JAX.copy(),
                     learning_rate=lr,
@@ -256,8 +250,9 @@ def benchmarks(
                     lr,
                     niter,
                     "Polyblocks",
-                    gradient_descent_polyblocks_single_loop,
+                    func,
                 )
+        time_cpp = None
         if run_cpp:
             time_cpp = benchmark_func(
                 X_JAX.copy(),
@@ -268,11 +263,21 @@ def benchmarks(
                 gradient_descent_cpp,
             )
 
-        speed_up_over_jax = time_jax / time_pb
-        print(f'Speed-up over JAX: {speed_up_over_jax}')
+        if time_pb != None and time_jax != None:
+            speed_up_over_jax = time_jax / time_pb
+            print(f"Speed-up over JAX: {speed_up_over_jax}")
+
+        if time_cpp != None and time_jax != None:
+            speed_up_over_cpp = time_cpp / time_pb
+            print(f"Speed-up over CPP: {speed_up_over_cpp}")
 
     ## Visualization
     if plots:
+        if speed_up_over_jax == None:
+            print(
+                "Benchmarking needs to be done before plotting. Enable benchmarking."
+            )
+            exit(1)
         # P, L = gradient_descent_cache(X.copy(), D, learning_rate=lr, num_iterations=niter)
         # plot_gradient_descent_2D(P, L, title="Gradient Descent in python numpy")
         # plot_gradient_descent(P, L, title="Gradient Descent in python numpy")
@@ -280,45 +285,43 @@ def benchmarks(
         # P_native, L_native = gradient_descent_native_cache(X_native.copy(), D_native, learning_rate=lr, num_iterations=niter)
         # plot_gradient_descent(P_native, L_native, title="Gradient Descent in native python")
 
-        X_res, P_res, L_res = gradient_descent_polyblocks_single_loop_to_plot(
+        (
+            X_res_pb,
+            P_res_pb,
+            L_res_pb,
+        ) = gradient_descent_polyblocks_single_loop_to_plot_cpu(
             X_JAX.copy(), D_JAX.copy(), learning_rate=lr, num_iterations=niter
         )
         (
             X_res_jax,
             P_res_jax,
             L_res_jax,
-        ) = gradient_descent_jax_single_loop_to_plot(
+        ) = gradient_descent_jax_to_plot_cpu(
             X_JAX.copy(), D_JAX.copy(), learning_rate=lr, num_iterations=niter
         )
 
         # To make the animation informative we adjust the frames as per the speed_up.
-        if speed_up > 1.0:
-            import math
+        import math
 
-            # Adjust points for the JAX run.
-            P_res_jax_to_use = []
-            L_res_jax_to_use = []
-            for p, l in zip(P_res_jax, L_res_jax):
-                for i in range(math.ceil(speed_up)):
-                    P_res_jax_to_use.append(p)
-                    L_res_jax_to_use.append(l)
-            P_res_jax = P_res_jax_to_use
-            L_res_jax = L_res_jax_to_use
-
-        if speed_up <= 1.0:
-            import math
-
+        def adjust_points(P, L):
             # Adjust points for the JAX run.
             P_res_to_use = []
             L_res_to_use = []
-            for p, l in zip(P_res, L_res):
-                for i in range(math.ceil(speed_up)):
+            for p, l in zip(P, L):
+                for i in range(math.ceil(speed_up_over_jax)):
                     P_res_to_use.append(p)
                     L_res_to_use.append(l)
-            P_res = P_res_to_use
-            L_res = L_res_to_use
+            return (P_res_to_use, L_res_to_use)
 
-        animate_gradient_descent(P_res, L_res, title="circle 2 polyblocks")
+        if speed_up_over_jax > 1.0:
+            P_res_jax, L_res_jax = adjust_points(P_res_jax, L_res_jax)
+
+        if speed_up_over_jax <= 1.0:
+            P_res_pb, L_res_pb = adjust_points(P_res_pb, L_res_pb)
+
+        animate_gradient_descent(
+            P_res_pb, L_res_pb, title="circle 2 polyblocks"
+        )
         animate_gradient_descent(P_res_jax, L_res_jax, title="circle 2 jax")
 
         # (cache function not implemented: Can only plot final value)
