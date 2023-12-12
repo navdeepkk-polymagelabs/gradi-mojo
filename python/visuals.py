@@ -151,4 +151,7 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
     )
 
     print(f"Done...")
-    fig.write_html("_".join(title.split())+".html")
+    html_filename = "_".join(title.split())+".html"
+    print(f'Saving animation {title} in {html_filename}')
+    fig.write_html(html_filename)
+    return html_filename

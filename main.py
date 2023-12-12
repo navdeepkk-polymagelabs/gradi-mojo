@@ -80,6 +80,49 @@ def benchmark_func(X, D, lr, niter, bench_name, func):
     return secs
 
 
+def combine_into_two_iframes_and_save(file1, file2):
+    combined_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>{file1} vs {file2}</title>
+        <style>
+            .container {{
+                display: flex;
+            }}
+            .iframe-container {{
+                flex: 1;
+                border: 1px solid #ddd;
+                margin: 10px;
+                height: 100vh;
+            }}
+            iframe {{
+                width: 100%;
+                height: 100%;
+                border: none; /* Remove iframe border */
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="iframe-container">
+                <iframe src="{file1}"></iframe>
+            </div>
+            <div class="iframe-container">
+                <iframe src="{file2}"></iframe>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    combined_filename = file1 + "_vs_" + file2 + ".html"
+    with open(combined_filename, "w") as file:
+        print(
+            f"Saving combined animation in {combined_html}. Save all generated HTML files to see the animation"
+        )
+        file.write(combined_html)
+
+
 def benchmarks(
     D,
     dim,
@@ -319,10 +362,14 @@ def benchmarks(
         if speed_up_over_jax <= 1.0:
             P_res_pb, L_res_pb = adjust_points(P_res_pb, L_res_pb)
 
-        animate_gradient_descent(
+        filename1 = animate_gradient_descent(
             P_res_pb, L_res_pb, title="circle 2 polyblocks"
         )
-        animate_gradient_descent(P_res_jax, L_res_jax, title="circle 2 jax")
+        filename = animate_gradient_descent(
+            P_res_jax, L_res_jax, title="circle 2 jax"
+        )
+
+        combine_into_two_iframes_and_save(filename1, filename2)
 
         # (cache function not implemented: Can only plot final value)
         # plot_gradient_descent(p_cpp, -1, title="Gradient Descent in C++")
