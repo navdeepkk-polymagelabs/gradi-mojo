@@ -26,7 +26,13 @@ def loss_using_tensors(X, D):
 
 # ----- Jax Method 1 -----
 @partial(jax.jit, static_argnums=(2,3))
-def gradient_descent_JAX(X, D, learning_rate=0.0001, num_iterations=1000):
+def gradient_descent_JAX_gpu(X, D, learning_rate=0.0001, num_iterations=1000):
+    iterations = jnp.arange(num_iterations)
+    (X, learning_rate, D), _ = jax.lax.scan(grad_step_no_loop, (X, learning_rate, D), iterations)
+    return X
+
+@partial(jax.jit, static_argnums=(2,3))
+def gradient_descent_JAX_cpu(X, D, learning_rate=0.0001, num_iterations=1000):
     iterations = jnp.arange(num_iterations)
     (X, learning_rate, D), _ = jax.lax.scan(grad_step_no_loop, (X, learning_rate, D), iterations)
     return X
