@@ -90,6 +90,14 @@ def plot_gradient_descent(positions_over_time, loss_over_time, title = 'Gradient
 
 def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradient Descent Animation", trace=False):
     print(f"Animating: {title}...")
+    # Get min and max for plot boundaries.
+    X_final = positions_over_time[-1]
+    min_x = np.min(X_final[:, 0])
+    max_x = np.max(X_final[:, 0])
+
+    # Find min and max values along the y (rows) direction (axis=1)
+    min_y = np.min(X_final[:, 1])
+    max_y = np.max(X_final[:, 1])
     points = np.array(positions_over_time)
     if points.ndim == 2:
         points = points[np.newaxis, :, :]
@@ -108,7 +116,7 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
             marker=dict(color=["red"] * N_points, size=10)
         )],
         layout=go.Layout(
-            title=title,
+            title=title.upper(),
             updatemenus=[dict(
                 type='buttons',
                 showactive=False,
@@ -121,8 +129,8 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
                     ]
                 )],
             scene=dict(
-                xaxis=dict(range=[-2, 2], autorange=False),
-                yaxis=dict(range=[-2, 2], autorange=False),
+                xaxis=dict(range=[min_x - 1, max_x + 1], autorange=False),
+                yaxis=dict(range=[min_y - 1, max_y + 1], autorange=False),
                 zaxis=dict(range=[-2, 2], autorange=False),
                 aspectmode='cube'
             )

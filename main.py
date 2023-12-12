@@ -65,7 +65,7 @@ def generate_distance_matrix(points):
     return distance_matrix
 
 
-NUM_ITERS = 100
+NUM_ITERS = 10
 
 
 def benchmark_func(X, D, lr, niter, bench_name, func):
@@ -115,10 +115,10 @@ def combine_into_two_iframes_and_save(file1, file2):
     </body>
     </html>
     """
-    combined_filename = file1 + "_vs_" + file2 + ".html"
+    combined_filename = "combined.html"
     with open(combined_filename, "w") as file:
         print(
-            f"Saving combined animation in {combined_html}. Save all generated HTML files to see the animation"
+            f"Saving combined animation in {combined_filename}. Save all three generated HTML files to see the animation."
         )
         file.write(combined_html)
 
@@ -149,7 +149,6 @@ def benchmarks(
 
     N = len(D)
     D = np.array(D, dtype=np.float64)
-    D_native = PyMatrix(D.tolist(), N, N)
 
     # Initial starting point
     np.random.seed(42)
@@ -159,11 +158,11 @@ def benchmarks(
     X_JAX = jax.device_put(X, device)
 
     if verify:
+        print("Running verification runs...")
 
         def run_verification_run(X, D, lr, niter, func):
             return func(X, D, lr, niter)
 
-        print("Running verification runs...")
         all_res = []
         if run_jax:
             func = gradient_descent_JAX_cpu
@@ -316,65 +315,76 @@ def benchmarks(
 
     ## Visualization
     if plots:
-        if speed_up_over_jax == None:
+        print("Generating animations...")
+        if speed_up_over_jax == None and speed_up_over_cpp == None:
             print(
                 "Benchmarking needs to be done before plotting. Enable benchmarking."
             )
             exit(1)
-        # P, L = gradient_descent_cache(X.copy(), D, learning_rate=lr, num_iterations=niter)
-        # plot_gradient_descent_2D(P, L, title="Gradient Descent in python numpy")
-        # plot_gradient_descent(P, L, title="Gradient Descent in python numpy")
-
-        # P_native, L_native = gradient_descent_native_cache(X_native.copy(), D_native, learning_rate=lr, num_iterations=niter)
-        # plot_gradient_descent(P_native, L_native, title="Gradient Descent in native python")
-
+        # Generate Points for PolyBlocks first.
+        func = gradient_descent_polyblocks_single_loop_to_plot_cpu
+        if gpu:
+            func = gradient_descent_polyblocks_single_loop_to_plot_gpu
         (
             X_res_pb,
             P_res_pb,
             L_res_pb,
-        ) = gradient_descent_polyblocks_single_loop_to_plot_cpu(
-            X_JAX.copy(), D_JAX.copy(), learning_rate=lr, num_iterations=niter
-        )
-        (
-            X_res_jax,
-            P_res_jax,
-            L_res_jax,
-        ) = gradient_descent_jax_to_plot_cpu(
+        ) = func(
             X_JAX.copy(), D_JAX.copy(), learning_rate=lr, num_iterations=niter
         )
 
-        # To make the animation informative we adjust the frames as per the speed_up.
         import math
 
-        def adjust_points(P, L):
-            # Adjust points for the JAX run.
+        def adjust_points(P, L, speed_up):
+            # Adjust points according to speed_up.
             P_res_to_use = []
             L_res_to_use = []
             for p, l in zip(P, L):
-                for i in range(math.ceil(speed_up_over_jax)):
+                # We bound the speed-up so that for more number of points the
+                # animation is rendered quickly.
+                for i in range(min(math.ceil(speed_up), 5)):
                     P_res_to_use.append(p)
                     L_res_to_use.append(l)
             return (P_res_to_use, L_res_to_use)
 
-        if speed_up_over_jax > 1.0:
-            P_res_jax, L_res_jax = adjust_points(P_res_jax, L_res_jax)
+        if run_jax and speed_up_over_jax != None:
+            func = gradient_descent_jax_to_plot_cpu
+            if gpu:
+                func = gradient_descent_jax_to_plot_gpu
+            (
+                X_res_jax,
+                P_res_jax,
+                L_res_jax,
+            ) = func(
+                X_JAX.copy(),
+                D_JAX.copy(),
+                learning_rate=lr,
+                num_iterations=niter,
+            )
 
-        if speed_up_over_jax <= 1.0:
-            P_res_pb, L_res_pb = adjust_points(P_res_pb, L_res_pb)
+            # To make the animation informative we adjust the frames as per the
+            # speed_up.
+            if speed_up_over_jax > 1.0:
+                P_res_jax, L_res_jax = adjust_points(
+                    P_res_jax, L_res_jax, speed_up_over_jax
+                )
 
-        filename1 = animate_gradient_descent(
-            P_res_pb, L_res_pb, title="circle 2 polyblocks"
-        )
-        filename = animate_gradient_descent(
-            P_res_jax, L_res_jax, title="circle 2 jax"
-        )
+            if speed_up_over_jax <= 1.0:
+                P_res_pb, L_res_pb = adjust_points(
+                    P_res_pb, L_res_pb, speed_up_over_jax
+                )
 
-        combine_into_two_iframes_and_save(filename1, filename2)
+            filename1 = animate_gradient_descent(
+                P_res_pb, L_res_pb, title="polyblocks"
+            )
+            filename2 = animate_gradient_descent(
+                P_res_jax, L_res_jax, title="jax"
+            )
 
-        # (cache function not implemented: Can only plot final value)
-        # plot_gradient_descent(p_cpp, -1, title="Gradient Descent in C++")
-
-        # animate_gradient_descent(P, L, trace=False)
+            combine_into_two_iframes_and_save(filename1, filename2)
+        else:
+            print("JAX run is disabled or speeed-up is not defined!")
+            exit(0)
 
 
 if __name__ == "__main__":
@@ -421,6 +431,11 @@ if __name__ == "__main__":
         help="Run gradient descent for flame",
     )
     parser.add_argument(
+        "-custom-coords-file",
+        default="",
+        help="Custom figure coordinates filename",
+    )
+    parser.add_argument(
         "-skip-jax",
         action="store_true",
         default=False,
@@ -459,6 +474,12 @@ if __name__ == "__main__":
         default=100,
         help="Number of learning iterations for gradient descent",
     )
+    parser.add_argument(
+        "-learning-rate",
+        type=float,
+        default=0.001,
+        help="Learning rate for gradient descent",
+    )
 
     args = vars(parser.parse_args())
 
@@ -468,18 +489,22 @@ if __name__ == "__main__":
 
     circle = args["circle"]
     flame = args["flame"]
+    custom_coords_filename = args["custom_coords_file"]
 
-    assert circle or flame, "Either one of circle or flame must be set!"
+    assert (
+        circle or flame or custom_coords_filename != ""
+    ), "Either one of circle, flame, or custom-coords-file must be set!"
 
     if circle:
         n_circle = args["num_points_circle"]
         points = generate_radial_points(n_circle, dim)
     elif flame:
         points = np.loadtxt("./shapes/flame.csv", delimiter=",")
+    elif custom_coords_filename != "":
+        points = np.loadtxt(custom_coords_filename, delimiter=",")
 
     # Optimization input
-    lr = 0.001
-    niter = 200
+    lr = args["learning_rate"]
     plots = args["plots"]
     niter = args["num_learning_iters"]
     gpu = args["gpu"]
