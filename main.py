@@ -65,16 +65,13 @@ def generate_distance_matrix(points):
     return distance_matrix
 
 
-NUM_ITERS = 100
-
-
-def benchmark_func(X, D, lr, niter, bench_name, func):
+def benchmark_func(X, D, lr, niter, bench_name, func, benchmark_iters):
     secs = (
         timeit(
             lambda: func(X, D, learning_rate=lr, num_iterations=niter),
-            number=NUM_ITERS,
+            number=benchmark_iters,
         )
-        / NUM_ITERS
+        / benchmark_iters
     )
     print(f"Average time {bench_name}: {secs}")
     return secs
@@ -128,6 +125,7 @@ def benchmarks(
     dim,
     lr,
     niter,
+    benchmark_iters,
     gpu,
     verify,
     benchmark,
@@ -253,6 +251,7 @@ def benchmarks(
                 niter,
                 "JAX",
                 func,
+                benchmark_iters,
             )
         time_pb = None
         if run_polyblocks:
@@ -274,6 +273,7 @@ def benchmarks(
                     niter,
                     "Polyblocks",
                     func,
+                    benchmark_iters,
                 )
             else:
                 func = gradient_descent_polyblocks_single_loop_cpu
@@ -293,6 +293,7 @@ def benchmarks(
                     niter,
                     "Polyblocks",
                     func,
+                    benchmark_iters,
                 )
         time_cpp = None
         if run_cpp:
@@ -303,6 +304,7 @@ def benchmarks(
                 niter,
                 "CPP",
                 gradient_descent_cpp,
+                benchmark_iters,
             )
 
         if time_pb != None and time_jax != None:
@@ -464,6 +466,12 @@ if __name__ == "__main__":
         help="Number of learning iterations for gradient descent",
     )
     parser.add_argument(
+        "-num-benchmarking-iters",
+        type=int,
+        default=100,
+        help="Number of benchmarking iterations for gradient descent",
+    )
+    parser.add_argument(
         "-learning-rate",
         type=float,
         default=0.001,
@@ -496,6 +504,7 @@ if __name__ == "__main__":
     lr = args["learning_rate"]
     plots = args["plots"]
     niter = args["num_learning_iters"]
+    benchmark_iters = args["num_benchmarking_iters"]
     gpu = args["gpu"]
     verify = not args["skip_verification"]
     atol = args["atol"]
@@ -512,6 +521,7 @@ if __name__ == "__main__":
         dim=dim,
         lr=lr,
         niter=niter,
+        benchmark_iters=benchmark_iters,
         gpu=gpu,
         verify=verify,
         benchmark=benchmark,
