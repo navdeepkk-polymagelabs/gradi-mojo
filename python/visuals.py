@@ -107,6 +107,34 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
 
     all_x, all_y, all_z = flatten(points)
 
+    sliders_dict = {
+        "active": 0,
+        "yanchor": "top",
+        "xanchor": "left",
+        "currentvalue": {
+            "font": {"size": 20},
+            "prefix": "Iteration:",
+            "visible": True,
+            "xanchor": "right"
+        },
+        "transition": {"duration": 300, "easing": "cubic-in-out"},
+        "pad": {"b": 10, "t": 50},
+        "len": 0.9,
+        "x": 0.1,
+        "y": 0,
+        "steps": []
+    }
+    for i in range(1, time_steps):
+        slider_step = {"args": [
+            [i],
+            {"frame": {"duration": 100 * duration_scale, "redraw": False},
+             "mode": "immediate",
+             "transition": {"duration": 100 * duration_scale}}
+        ],
+            "label": i,
+            "method": "animate"}
+        sliders_dict["steps"].append(slider_step)
+
     fig = go.Figure(
         data=[go.Scatter3d(
             x=all_x[:N_points], 
@@ -141,7 +169,8 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
                 yaxis=dict(range=[min_y - 1, max_y + 1], autorange=False),
                 zaxis=dict(range=[-2, 2], autorange=False),
                 aspectmode='cube'
-            )
+            ),
+            sliders=[sliders_dict]
         ),
         frames=[go.Frame(
             data=[
@@ -157,6 +186,7 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
                     )
                 )
             ],
+            name=str(i),
             layout=dict(annotations=[dict(
                 showarrow=False, x=0.90, y=0.90,
                 xref="paper", yref="paper",
