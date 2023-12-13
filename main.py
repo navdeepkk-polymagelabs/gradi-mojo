@@ -460,7 +460,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-num-learning-iters",
         type=int,
-        default=100,
+        default=1000,
         help="Number of learning iterations for gradient descent",
     )
     parser.add_argument(
