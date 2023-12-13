@@ -65,7 +65,7 @@ def generate_distance_matrix(points):
     return distance_matrix
 
 
-NUM_ITERS = 10
+NUM_ITERS = 100
 
 
 def benchmark_func(X, D, lr, niter, bench_name, func):
