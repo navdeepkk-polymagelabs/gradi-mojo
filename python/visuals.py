@@ -117,6 +117,7 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
         )],
         layout=go.Layout(
             title=title.upper(),
+            titlefont=dict(size=30),
             updatemenus=[dict(
                 type='buttons',
                 showactive=False,
@@ -125,7 +126,14 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
                         label='Play',
                         method='animate',
                         args=[None, dict(frame=dict(duration=100 * duration_scale, redraw=True), fromcurrent=True, mode="immediate")]
-                    )
+                    ),
+                    {
+                        "args": [[None], {"frame": {"duration": 0, "redraw": False},
+                                          "mode": "immediate",
+                                          "transition": {"duration": 0}}],
+                        "label": "Pause",
+                        "method": "animate"
+                    }
                     ]
                 )],
             scene=dict(
