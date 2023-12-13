@@ -124,7 +124,7 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
                     dict(
                         label='Play',
                         method='animate',
-                        args=[None, dict(frame=dict(duration=1, redraw=True), fromcurrent=True, mode="immediate")]
+                        args=[None, dict(frame=dict(duration=100, redraw=True), fromcurrent=True, mode="immediate")]
                     )
                     ]
                 )],
