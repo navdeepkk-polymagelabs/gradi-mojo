@@ -375,13 +375,13 @@ def benchmarks(
                 )
 
             filename1 = animate_gradient_descent(
-                P_res_pb, L_res_pb, title="polyblocks"
+                P_res_pb, L_res_pb, title="JAX/PolyBlocks"
             )
             filename2 = animate_gradient_descent(
-                P_res_jax, L_res_jax, title="jax"
+                P_res_jax, L_res_jax, title="JAX (JIT)"
             )
 
-            combine_into_two_iframes_and_save(filename1, filename2)
+            combine_into_two_iframes_and_save(filename2, filename1)
         else:
             print("JAX run is disabled or speeed-up is not defined!")
             exit(0)
