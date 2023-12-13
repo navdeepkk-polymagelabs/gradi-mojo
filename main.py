@@ -333,20 +333,6 @@ def benchmarks(
             X_JAX.copy(), D_JAX.copy(), learning_rate=lr, num_iterations=niter
         )
 
-        import math
-
-        def adjust_points(P, L, speed_up):
-            # Adjust points according to speed_up.
-            P_res_to_use = []
-            L_res_to_use = []
-            for p, l in zip(P, L):
-                # We bound the speed-up so that for more number of points the
-                # animation is rendered quickly.
-                for i in range(min(math.ceil(speed_up), 5)):
-                    P_res_to_use.append(p)
-                    L_res_to_use.append(l)
-            return (P_res_to_use, L_res_to_use)
-
         if run_jax and speed_up_over_jax != None:
             func = gradient_descent_jax_to_plot_cpu
             if gpu:
@@ -362,23 +348,26 @@ def benchmarks(
                 num_iterations=niter,
             )
 
-            # To make the animation informative we adjust the frames as per the
-            # speed_up.
-            if speed_up_over_jax > 1.0:
-                P_res_jax, L_res_jax = adjust_points(
-                    P_res_jax, L_res_jax, speed_up_over_jax
-                )
-
-            if speed_up_over_jax <= 1.0:
-                P_res_pb, L_res_pb = adjust_points(
-                    P_res_pb, L_res_pb, speed_up_over_jax
-                )
+            scale_pb = 1
+            scale_jax = 1
+            if speed_up_over_jax > 1:
+                scale_jax = speed_up_over_jax
+            else:
+                scale_pb = speed_up_over_jax
 
             filename1 = animate_gradient_descent(
-                P_res_pb, L_res_pb, title="JAX/PolyBlocks"
+                P_res_pb,
+                L_res_pb,
+                title="JAX/PolyBlocks",
+                filename="polyblocks",
+                duration_scale=scale_pb,
             )
             filename2 = animate_gradient_descent(
-                P_res_jax, L_res_jax, title="JAX (JIT)"
+                P_res_jax,
+                L_res_jax,
+                title="JAX (JIT)",
+                filename="jax",
+                duration_scale=scale_jax,
             )
 
             combine_into_two_iframes_and_save(filename2, filename1)

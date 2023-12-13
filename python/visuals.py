@@ -88,7 +88,7 @@ def plot_gradient_descent(positions_over_time, loss_over_time, title = 'Gradient
     fig.show()
 
 
-def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradient Descent Animation", trace=False):
+def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradient Descent Animation", filename='animation', duration_scale=1, trace=False):
     print(f"Animating: {title}...")
     # Get min and max for plot boundaries.
     X_final = positions_over_time[-1]
@@ -124,7 +124,7 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
                     dict(
                         label='Play',
                         method='animate',
-                        args=[None, dict(frame=dict(duration=100, redraw=True), fromcurrent=True, mode="immediate")]
+                        args=[None, dict(frame=dict(duration=100 * duration_scale, redraw=True), fromcurrent=True, mode="immediate")]
                     )
                     ]
                 )],
@@ -159,7 +159,7 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
     )
 
     print(f"Done...")
-    html_filename = "_".join(title.split())+".html"
+    html_filename = "_".join(filename.split())+".html"
     print(f'Saving animation {title} in {html_filename}')
     fig.write_html(html_filename)
     return html_filename
