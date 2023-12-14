@@ -310,7 +310,7 @@ def benchmarks(
             speed_up_over_jax = time_jax / time_pb
             print(f"Speed-up over JAX: {speed_up_over_jax}")
 
-        if time_cpp != None and time_jax != None:
+        if time_pb != None and time_cpp != None:
             speed_up_over_cpp = time_cpp / time_pb
             print(f"Speed-up over CPP: {speed_up_over_cpp}")
 
