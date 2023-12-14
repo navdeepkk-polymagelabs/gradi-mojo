@@ -151,7 +151,6 @@ def benchmarks(
     # Initial starting point
     np.random.seed(42)
     X = np.random.rand(N, dim)
-    X_native = PyMatrix(X.tolist(), N, dim)
     D_JAX = jax.device_put(D, device)
     X_JAX = jax.device_put(X, device)
 
@@ -298,8 +297,8 @@ def benchmarks(
         time_cpp = None
         if run_cpp:
             time_cpp = benchmark_func(
-                X_JAX.copy(),
-                D_JAX.copy(),
+                X.copy(),
+                D.copy(),
                 lr,
                 niter,
                 "CPP",
