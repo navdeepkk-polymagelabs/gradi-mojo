@@ -13,7 +13,7 @@ void compute_gradient(
     ) {
     float squared_distance;
     
-    int num_threads = omp_get_max_threads();
+    int num_threads = 16;//omp_get_max_threads();
     // std::cout << num_threads << std::endl;     // 20 for my machine
     omp_set_num_threads(num_threads);
     #pragma omp parallel for private(squared_distance)
