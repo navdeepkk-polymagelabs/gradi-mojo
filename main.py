@@ -411,7 +411,7 @@ def benchmarks(
             )
 
             combine_into_two_iframes_and_save(jax_anim, pb_anim, 'jax_polyblocks.html')
-        elif run_jax and speed_up_over_jax:
+        elif run_jax and speed_up_over_jax == None:
             print("JAX run is enabled but speed-up is not defined!")
             exit(0)
 
