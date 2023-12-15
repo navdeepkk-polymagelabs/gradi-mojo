@@ -127,9 +127,9 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
     for i in range(1, time_steps):
         slider_step = {"args": [
             [i],
-            {"frame": {"duration": 100 * duration_scale, "redraw": False},
+            {"frame": {"duration": 50 * duration_scale, "redraw": False},
              "mode": "immediate",
-             "transition": {"duration": 100 * duration_scale}}
+             "transition": {"duration": 50 * duration_scale}}
         ],
             "label": i,
             "method": "animate"}
@@ -153,7 +153,7 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
                     dict(
                         label='Play',
                         method='animate',
-                        args=[None, dict(frame=dict(duration=100 * duration_scale, redraw=True), fromcurrent=True, mode="immediate")]
+                        args=[None, dict(frame=dict(duration=50 * duration_scale, redraw=True), fromcurrent=True, mode="immediate")]
                     ),
                     {
                         "args": [[None], {"frame": {"duration": 0, "redraw": False},
