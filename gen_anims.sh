@@ -16,13 +16,13 @@ cd ../
 # Generate plots for sphere.
 mkdir sphere
 cd sphere
-python ../../main.py -circle -dim=3 -plots -num-learning-iters=300 -skip-verification -num-points-circle=1000 -learning-rate=0.0001 -num-benchmarking-iters=20 -run-cpp
+python ../../main.py -circle -dim=3 -plots -num-learning-iters=200 -skip-verification -num-points-circle=1000 -learning-rate=0.0001 -num-benchmarking-iters=20 -run-cpp
 cd ../
 
 # Generate plots for flame_2.
 mkdir flame_2
 cd flame_2
-python ../../main.py -custom-coords-file="../../shapes/flame.csv" -dim=2 -plots -num-learning-iters=200 -skip-verification -run-cpp
+python ../../main.py -custom-coords-file="../../shapes/flame.csv" -dim=2 -plots -num-learning-iters=200 -skip-verification -run-cpp -num-leraning-iters=80
 cd ../
 
 # Generate plots for flame_3.
