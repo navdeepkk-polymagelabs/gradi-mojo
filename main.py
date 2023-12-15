@@ -65,14 +65,27 @@ def generate_distance_matrix(points):
     return distance_matrix
 
 
-def benchmark_func(X, D, lr, niter, bench_name, func, benchmark_iters):
-    secs = (
-        timeit(
-            lambda: func(X, D, learning_rate=lr, num_iterations=niter),
-            number=benchmark_iters,
+def benchmark_func(
+    X, D, lr, niter, bench_name, func, benchmark_iters, block=False
+):
+    if not block:
+        secs = (
+            timeit(
+                lambda: func(X, D, learning_rate=lr, num_iterations=niter),
+                number=benchmark_iters,
+            )
+            / benchmark_iters
         )
-        / benchmark_iters
-    )
+    else:
+        secs = (
+            timeit(
+                lambda: func(
+                    X, D, learning_rate=lr, num_iterations=niter
+                ).block_until_ready(),
+                number=benchmark_iters,
+            )
+            / benchmark_iters
+        )
     print(f"Average time {bench_name}: {secs}")
     return secs
 
@@ -204,18 +217,23 @@ def benchmarks(
         if verify:
             print("Running verification runs...")
 
-            def run_verification_run(X, D, lr, niter, func):
-                return func(X, D, lr, niter)
+            def run_verification_run(X, D, lr, niter, func, block=False):
+                if not block:
+                    return func(X, D, lr, niter)
+                else:
+                    return func(X, D, lr, niter).block_until_ready()
 
             all_res = []
             if run_jax:
                 func = gradient_descent_JAX_cpu
+                block = False
                 if gpu:
                     func = gradient_descent_JAX_gpu
+                    block = True
                 all_res.append(
                     (
                         run_verification_run(
-                            X_JAX.copy(), D_JAX.copy(), lr, niter, func
+                            X_JAX.copy(), D_JAX.copy(), lr, niter, func, block
                         ),
                         "jax",
                     )
@@ -280,8 +298,10 @@ def benchmarks(
             if run_jax:
                 # Warm-up.
                 func = gradient_descent_JAX_cpu
+                block = False
                 if gpu:
                     func = gradient_descent_JAX_gpu
+                    block = True
                 func(
                     X_JAX.copy(),
                     D_JAX.copy(),
@@ -296,6 +316,7 @@ def benchmarks(
                     "JAX",
                     func,
                     benchmark_iters,
+                    block,
                 )
             time_pb = None
             if run_polyblocks:
@@ -386,9 +407,11 @@ def benchmarks(
             )
 
             if run_jax and speed_up_over_jax != None:
-                func = gradient_descent_jax_to_plot_cpu
+                func = jax.block_until_ready(gradient_descent_jax_to_plot_cpu)
                 if gpu:
-                    func = gradient_descent_jax_to_plot_gpu
+                    func = jax.block_until_ready(
+                        gradient_descent_jax_to_plot_gpu
+                    )
                 (
                     X_res_jax,
                     P_res_jax,
