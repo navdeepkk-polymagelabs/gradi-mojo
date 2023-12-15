@@ -50,7 +50,7 @@ cd ../
 # Generate plots for flame_2.
 mkdir flame_2
 cd flame_2
-python ../../main.py -custom-coords-file="../../shapes/flame.csv" -dim=2 -plots -num-learning-iters=200 -skip-verification -run-cpp -num-leraning-iters=80 $gpu_flag
+python ../../main.py -custom-coords-file="../../shapes/flame.csv" -dim=2 -plots -num-learning-iters=80 -skip-verification -run-cpp $gpu_flag
 cd ../
 
 # Generate plots for flame_3.
