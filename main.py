@@ -3,7 +3,7 @@ import numpy as np
 import jax
 import os
 
-from cpp.binding import gradient_descent_cpp
+from cpp.binding import gradient_descent_cpp, gradient_descent_cpp_to_plot
 from python.gradient_descent import gradient_descent, gradient_descent_cache
 from python.gradient_descent_native import (
     gradient_descent_native,
@@ -77,7 +77,7 @@ def benchmark_func(X, D, lr, niter, bench_name, func, benchmark_iters):
     return secs
 
 
-def combine_into_two_iframes_and_save(file1, file2):
+def combine_into_two_iframes_and_save(file1, file2, combined_filename='combined.html'):
     combined_html = f"""
     <!DOCTYPE html>
     <html>
@@ -112,7 +112,51 @@ def combine_into_two_iframes_and_save(file1, file2):
     </body>
     </html>
     """
-    combined_filename = "combined.html"
+    with open(combined_filename, "w") as file:
+        print(
+            f"Saving combined animation in {combined_filename}. Save all three generated HTML files to see the animation."
+        )
+        file.write(combined_html)
+
+
+def combine_into_three_iframes_and_save(file1, file2, file3, combined_filename='combined.html'):
+    combined_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>{file1} vs {file2} vs {file3}</title>
+        <style>
+            .container {{
+                display: flex;
+            }}
+            .iframe-container {{
+                flex: 1;
+                border: 1px solid #ddd;
+                margin: 10px;
+                height: 100vh;
+            }}
+            iframe {{
+                width: 100%;
+                height: 100%;
+                border: none; /* Remove iframe border */
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="iframe-container">
+                <iframe src="{file1}"></iframe>
+            </div>
+            <div class="iframe-container">
+                <iframe src="{file2}"></iframe>
+            </div>
+            <div class="iframe-container">
+                <iframe src="{file3}"></iframe>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
     with open(combined_filename, "w") as file:
         print(
             f"Saving combined animation in {combined_filename}. Save all three generated HTML files to see the animation."
@@ -225,6 +269,7 @@ def benchmarks(
 
     ### Benchmarks
     speed_up_over_jax = None
+    speed_up_over_cpp = None
     if benchmark:
         print("Benchmarking runs...")
 
@@ -322,7 +367,9 @@ def benchmarks(
                 "Benchmarking needs to be done before plotting. Enable benchmarking."
             )
             exit(1)
-        # Generate Points for PolyBlocks first.
+        # Generate Points for PolyBlocks first. We will plot all points with
+        # polyblocks as the base reference. Animations will be scaled with
+        # polyblocks as the reference.
         func = gradient_descent_polyblocks_single_loop_to_plot_cpu
         if gpu:
             func = gradient_descent_polyblocks_single_loop_to_plot_gpu
@@ -332,6 +379,12 @@ def benchmarks(
             L_res_pb,
         ) = func(
             X_JAX.copy(), D_JAX.copy(), learning_rate=lr, num_iterations=niter
+        )
+        pb_anim = animate_gradient_descent(
+            P_res_pb,
+            L_res_pb,
+            title="JAX/PolyBlocks",
+            filename="polyblocks",
         )
 
         if run_jax and speed_up_over_jax != None:
@@ -349,32 +402,44 @@ def benchmarks(
                 num_iterations=niter,
             )
 
-            scale_pb = 1
-            scale_jax = 1
-            if speed_up_over_jax > 1:
-                scale_jax = speed_up_over_jax
-            else:
-                scale_pb = speed_up_over_jax
-
-            filename1 = animate_gradient_descent(
-                P_res_pb,
-                L_res_pb,
-                title="JAX/PolyBlocks",
-                filename="polyblocks",
-                duration_scale=scale_pb,
-            )
-            filename2 = animate_gradient_descent(
+            jax_anim = animate_gradient_descent(
                 P_res_jax,
                 L_res_jax,
                 title="JAX (JIT)",
                 filename="jax",
-                duration_scale=scale_jax,
+                duration_scale=speed_up_over_jax,
             )
 
-            combine_into_two_iframes_and_save(filename2, filename1)
-        else:
-            print("JAX run is disabled or speeed-up is not defined!")
+            combine_into_two_iframes_and_save(jax_anim, pb_anim, 'jax_polyblocks.html')
+        elif run_jax and speed_up_over_jax:
+            print("JAX run is enabled but speed-up is not defined!")
             exit(0)
+
+
+        if run_cpp and speed_up_over_cpp != None:
+            func = gradient_descent_cpp_to_plot
+            P_res_cpp = func(
+                X.copy(),
+                D.copy(),
+                learning_rate=lr,
+                num_iterations=niter,
+            )
+
+            cpp_anim = animate_gradient_descent(
+                P_res_cpp,
+                L_res_pb,
+                title="C++",
+                filename="cpp",
+                duration_scale=speed_up_over_cpp,
+            )
+
+            combine_into_two_iframes_and_save(cpp_anim, pb_anim, 'cpp_polyblocks.html')
+        elif run_cpp and speed_up_over_cpp == None:
+            print("CPP run is enabled but speed-up is not defined!")
+            exit(0)
+
+        if run_cpp and run_jax and speed_up_over_cpp != None and speed_up_over_jax != None:
+            combine_into_three_iframes_and_save(jax_anim, cpp_anim, pb_anim, 'cpp_jax_polyblocks.html')
 
 
 if __name__ == "__main__":

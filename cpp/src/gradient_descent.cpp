@@ -53,3 +53,24 @@ OutputBindingInterface gradient_descent(InputBindingInterface input){
     output.X = X;
     return output;
 }
+
+PlotOutputBindingInterface gradient_descent_to_plot_cpp(InputBindingInterface input){
+    Eigen::MatrixXf grad(input.N, input.dim);
+    Eigen::MatrixXf X = input.X;
+    
+
+    PlotOutputBindingInterface output;
+    for (int iter = 0; iter < input.num_iterations; ++iter) {
+        grad.setZero();
+        compute_gradient(grad, X, input.D);
+
+        for (int r = 0; r < X.rows(); ++r) {
+            for (int c = 0; c < X.cols(); ++c) {
+                X(r, c) -= input.learning_rate * grad(r, c);
+            }
+        }
+        output.all_X.push_back(X);
+    }
+
+    return output;
+}
