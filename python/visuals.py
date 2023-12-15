@@ -88,7 +88,7 @@ def plot_gradient_descent(positions_over_time, loss_over_time, title = 'Gradient
     fig.show()
 
 
-def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradient Descent Animation", filename='animation', duration_scale=1, trace=False):
+def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradient Descent Animation", filename='animation', duration_scale=1, speed_up_over_name='PolyBlocks', trace=False):
     print(f"Animating: {title}...")
     # Get min and max for plot boundaries.
     X_final = positions_over_time[-1]
@@ -188,10 +188,10 @@ def animate_gradient_descent(positions_over_time, loss_over_time, title="Gradien
             ],
             name=str(i),
             layout=dict(annotations=[dict(
-                showarrow=False, x=0.90, y=0.90,
+                showarrow=False, x=1.0, y=1.0,
                 xref="paper", yref="paper",
-                text=f"Iteration: {i+1}<br>Loss: {loss_over_time[i]:.4f}",
-                font=dict(size=25)
+                text=f"Iteration: {i+1}<br>Loss: {loss_over_time[i]:.4f}<br>Performance relative to {speed_up_over_name}: {duration_scale:.2f}",
+                font=dict(size=20)
             )])
             ) for i in range(1, time_steps)]
     )

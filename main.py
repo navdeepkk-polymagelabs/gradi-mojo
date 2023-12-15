@@ -428,7 +428,7 @@ def benchmarks(
             cpp_anim = animate_gradient_descent(
                 P_res_cpp,
                 L_res_pb,
-                title="C++",
+                title="C++ 16 threads",
                 filename="cpp",
                 duration_scale=speed_up_over_cpp,
             )
